@@ -1,0 +1,3 @@
+sim/*
+!sim/*.f
+!sim/*.sv
