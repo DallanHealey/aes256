@@ -8,7 +8,7 @@ module aes256_encrypt (
     output logic [127:0] axis_tdata_o
 );
 
-`include "SBOX"
+`include "utils"
 
 // Using key from here for testing: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf#page=35
 localparam logic [255:0] KEY = 256'hf4df1409a310982dd708613b072c351f81777d85f0ae732bbe71ca1510eb3d60;
@@ -21,7 +21,7 @@ int round_keys_counter;
 int next_round_keys_counter;
 
 typedef enum {
-    IDLE, ROUND
+    IDLE, ROUND, DONE
 } state_t;
 state_t state, next_state;
 
@@ -39,7 +39,6 @@ always_ff @( posedge clk_i, posedge rst_i ) begin
 end
 
 
-logic [7:0] test;
 always_comb begin
     next_round_keys = round_keys;
     next_round_keys_counter = round_keys_counter;
@@ -51,24 +50,28 @@ always_comb begin
 
         ROUND : begin
             next_state = ROUND;
-            next_round_keys_counter = round_keys_counter + 1;
+
+            if (round_keys_counter == NUM_ROUND_KEYS_NEEDED*4-1) begin
+                next_round_keys_counter = 0;
+                next_state = DONE;
+            end else begin
+                next_round_keys_counter = round_keys_counter + 1;
+            end
 
             if (round_keys_counter < 8) begin
                 next_round_keys[round_keys_counter] = KEY[round_keys_counter*32+31-:32];
-            end else if (round_keys_counter < 16) begin
-                if (round_keys_counter == 8) begin
-                    next_round_keys[round_keys_counter] = round_keys[round_keys_counter-8] ^ ({SBOX_FORWARD[round_keys[round_keys_counter-1][7:4]][round_keys[round_keys_counter-1][3:0]],
-                                                                                                SBOX_FORWARD[round_keys[round_keys_counter-1][31:28]][round_keys[round_keys_counter-1][27:24]],
-                                                                                                SBOX_FORWARD[round_keys[round_keys_counter-1][23:20]][round_keys[round_keys_counter-1][19:16]],
-                                                                                                SBOX_FORWARD[round_keys[round_keys_counter-1][15:12]][round_keys[round_keys_counter-1][11:8]]})
-                                                                                           ^ rconn[round_keys_counter-8];
-                end else begin
-                    next_round_keys[round_keys_counter] = round_keys[round_keys_counter-8] ^ ({SBOX_FORWARD[round_keys[round_keys_counter-1][7:4]][round_keys[round_keys_counter-1][3:0]],
-                                                                                                SBOX_FORWARD[round_keys[round_keys_counter-1][31:28]][round_keys[round_keys_counter-1][27:24]],
-                                                                                                SBOX_FORWARD[round_keys[round_keys_counter-1][23:20]][round_keys[round_keys_counter-1][19:16]],
-                                                                                                SBOX_FORWARD[round_keys[round_keys_counter-1][15:12]][round_keys[round_keys_counter-1][11:8]]});
-                end
+            end else if (round_keys_counter >= 8 && round_keys_counter % 8 == 0) begin
+                next_round_keys[round_keys_counter] = round_keys[round_keys_counter - 8] ^ sbox_f(rotword(round_keys[round_keys_counter - 1])) ^ rconn[(round_keys_counter - 8) / 8];
+            end else if (round_keys_counter >= 8 && round_keys_counter % 8 == 4) begin
+                // N (length of key in 32-bit words) also needs to be greater than 6, which it is because we are doing AES256
+                next_round_keys[round_keys_counter] = round_keys[round_keys_counter - 8] ^ sbox_f(round_keys[round_keys_counter - 1]);
+            end else begin
+                next_round_keys[round_keys_counter] = round_keys[round_keys_counter - 8] ^ round_keys[round_keys_counter - 1];
             end
+        end
+
+        DONE : begin
+            
         end
     endcase
 end

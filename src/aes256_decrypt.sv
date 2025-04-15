@@ -6,9 +6,9 @@ module aes256_decrypt (
     output logic [7:0] data_o
 );
 
-`include "SBOX"
+`include "utils"
 
-localparam logic [255:0] KEY = 256'h112233445566778899AABBCCDDEEFF;
+localparam logic [255:0] KEY = 256'hf4df1409a310982dd708613b072c351f81777d85f0ae732bbe71ca1510eb3d60;
 
 typedef enum {
     IDLE, ROUND

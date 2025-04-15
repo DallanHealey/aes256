@@ -76,3 +76,17 @@ localparam logic [0:15][0:15][7:0] SBOX_INVERSE = {{
     {8'ha0, 8'he0, 8'h3b, 8'h4d, 8'hae, 8'h2a, 8'hf5, 8'hb0, 8'hc8, 8'heb, 8'hbb, 8'h3c, 8'h83, 8'h53, 8'h99, 8'h61},
     {8'h17, 8'h2b, 8'h04, 8'h7e, 8'hba, 8'h77, 8'hd6, 8'h26, 8'he1, 8'h69, 8'h14, 8'h63, 8'h55, 8'h21, 8'h0c, 8'h7d}
 }};
+
+/*
+ * Performs forward SBOX translation as described in the AES spec
+*/
+function logic [31:0] sbox_f(input logic [31:0] data_i);
+    return {SBOX_FORWARD[data_i[31:28]][data_i[27:24]], SBOX_FORWARD[data_i[23:20]][data_i[19:16]], SBOX_FORWARD[data_i[15:12]][data_i[11: 8]], SBOX_FORWARD[data_i[ 7: 4]][data_i[ 3: 0]]};
+endfunction
+
+/*
+ * Performs word rotation as described in the AES spec
+*/
+function logic [31:0] rotword(input logic [31:0] data_i);
+    return {data_i[7:0], data_i[31:8]};
+endfunction
