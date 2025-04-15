@@ -20,16 +20,20 @@ initial begin
     $dumpfile("vsim.fst");
     $dumpvars(0, tb_aes);
 
-    @(posedge clk_i);
-    axis_tdata_i = 128'h19;
+    axis_tdata_i = 128'h0;
+    axis_tvalid_i = 1'b0;
+    axis_tlast_i = 1'b0;
 
     #1us;
     @(posedge clk_i);
     rst_i = 1'b0;
 
     #1us;
+
     @(posedge clk_i);
-    axis_tdata_i = 128'h01;
+    axis_tdata_i = 128'hffeeddccbbaa99887766554433221100;
+    axis_tvalid_i = 1'b1;
+    
     #1us;
     // assert(data_o == data_i) else $error("TX does not match RX");
 

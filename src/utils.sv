@@ -78,10 +78,17 @@ localparam logic [0:15][0:15][7:0] SBOX_INVERSE = {{
 }};
 
 /*
- * Performs forward SBOX translation as described in the AES spec
+ * Performs forward SBOX translation as described in the AES spec on 32 bits
 */
-function logic [31:0] sbox_f(input logic [31:0] data_i);
-    return {SBOX_FORWARD[data_i[31:28]][data_i[27:24]], SBOX_FORWARD[data_i[23:20]][data_i[19:16]], SBOX_FORWARD[data_i[15:12]][data_i[11: 8]], SBOX_FORWARD[data_i[ 7: 4]][data_i[ 3: 0]]};
+function logic [31:0] sbox_f_32(input logic [31:0] data_i);
+    return {SBOX_FORWARD[data_i[31:28]][data_i[27:24]], SBOX_FORWARD[data_i[23:20]][data_i[19:16]], SBOX_FORWARD[data_i[15:12]][data_i[11:8]], SBOX_FORWARD[data_i[7:4]][data_i[3:0]]};
+endfunction
+
+/*
+ * Performs forward SBOX translation as described in the AES spec on 128 bits
+*/
+function logic [127:0] sbox_f_128(input logic [127:0] data_i);
+    return {sbox_f_32(data_i[127:96]), sbox_f_32(data_i[95:64]), sbox_f_32(data_i[63:32]), sbox_f_32(data_i[31:0])};
 endfunction
 
 /*
@@ -89,4 +96,57 @@ endfunction
 */
 function logic [31:0] rotword(input logic [31:0] data_i);
     return {data_i[7:0], data_i[31:8]};
+endfunction
+
+/*
+ * Return the current round key group of 32 bytes using a given starting index
+*/
+function logic [127:0] get_round_key_group(input logic [31:0] round_keys[0:NUM_ROUND_KEYS_NEEDED*4-1], input integer index);
+    return {round_keys[index + 3], round_keys[index + 2], round_keys[index + 1], round_keys[index + 0]};
+endfunction
+
+// TODO: Maybe get this to work as expected?
+// function logic [0:3][0:3][7:0] data_to_array(input logic [127:0] data_i);
+//     logic [0:3][0:3][7:0] data_o;
+
+//     for (int row = 0; row < 4; row += 1) begin
+//         for (int col = 0; col < 3; col += 1) begin
+//             data_o[row][col] = data_i[(row+col)*8+:8];
+//         end
+//     end
+
+//     return data_o;
+// endfunction
+
+/*
+ * Shifts rows according to the AES spec
+*/
+function logic [127:0] shift_rows_128(input logic [127:0] data_i);
+    logic [31:0] row_0;
+    logic [31:0] row_0_shifted;
+    logic [31:0] row_1;
+    logic [31:0] row_1_shifted;
+    logic [31:0] row_2;
+    logic [31:0] row_2_shifted;
+    logic [31:0] row_3;
+    logic [31:0] row_3_shifted;
+    
+    row_0 = {data_i[103:96], data_i[71:64], data_i[39:32], data_i[7:0]};
+    row_0_shifted = row_0;
+
+    row_1 = {data_i[111:104], data_i[79:72], data_i[47:40], data_i[15:8]};
+    row_1_shifted = {row_1[7:0], row_1[31:8]};
+
+    row_2 = {data_i[119:112], data_i[87:80], data_i[55:48], data_i[23:16]};
+    row_2_shifted = {row_2[15:0], row_2[31:16]};
+
+    row_3 = {data_i[127:120], data_i[95:88], data_i[63:56], data_i[31:24]};
+    row_3_shifted = {row_3[23:0], row_3[31:24]};
+
+    return {
+        row_3_shifted[31:24], row_2_shifted[31:24], row_1_shifted[31:24], row_0_shifted[31:24],
+        row_3_shifted[23:16], row_2_shifted[23:16], row_1_shifted[23:16], row_0_shifted[23:16],
+        row_3_shifted[15: 8], row_2_shifted[15: 8], row_1_shifted[15: 8], row_0_shifted[15: 8],
+        row_3_shifted[ 7: 0], row_2_shifted[ 7: 0], row_1_shifted[ 7: 0], row_0_shifted[ 7: 0]
+    };
 endfunction
