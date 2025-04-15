@@ -1,3 +1,5 @@
 sim/*
 !sim/*.f
 !sim/*.sv
+!sim/*.sh
+settings.json

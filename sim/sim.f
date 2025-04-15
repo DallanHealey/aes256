@@ -6,7 +6,7 @@ tb_aes.sv
 ../src/aes256_decrypt.sv
 
 
-+incdir+/mnt/g/Applications/Efinity/2024.1/sim_models/verilog
++incdir+/mnt/g/Applications/Efinity/2024.2/sim_models/verilog
 efx_add.v
 efx_comb4.v
 efx_dpram_5k.v

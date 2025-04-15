@@ -2,10 +2,10 @@ module tb_aes();
 
 logic clk_i;
 logic rst_i;
-logic [7:0] axis_tdata_i;
-logic       axis_tvalid_i;
-logic       axis_tlast_i;
-logic [7:0] axis_tdata_o;
+logic [127:0] axis_tdata_i;
+logic         axis_tvalid_i;
+logic         axis_tlast_i;
+logic [127:0] axis_tdata_o;
 
 initial begin
     clk_i = 1'b0;
@@ -18,10 +18,10 @@ end
 
 initial begin
     $dumpfile("vsim.fst");
-    $dumpvars(0, top);
+    $dumpvars(0, tb_aes);
 
     @(posedge clk_i);
-    axis_tdata_i = 8'h19;
+    axis_tdata_i = 128'h19;
 
     #1us;
     @(posedge clk_i);
@@ -29,7 +29,7 @@ initial begin
 
     #1us;
     @(posedge clk_i);
-    axis_tdata_i = 8'h1;
+    axis_tdata_i = 128'h01;
     #1us;
     // assert(data_o == data_i) else $error("TX does not match RX");
 
