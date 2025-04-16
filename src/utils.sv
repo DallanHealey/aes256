@@ -150,3 +150,20 @@ function logic [127:0] shift_rows_128(input logic [127:0] data_i);
         row_3_shifted[ 7: 0], row_2_shifted[ 7: 0], row_1_shifted[ 7: 0], row_0_shifted[ 7: 0]
     };
 endfunction
+
+
+`include "mult_tables"
+
+function logic [31:0] multiply_helper(input logic [31:0] data_i);
+    logic [7:0] d0;
+    logic [7:0] d1;
+    logic [7:0] d2;
+    logic [7:0] d3;
+
+    d0 = MULT_2[data_i[7:4]][data_i[3:0]] ^ MULT_3[data_i[15:12]][data_i[11:8]] ^ data_i[23:16] ^ data_i[31:24];
+    d1 = data_i[7:0] ^ MULT_2[data_i[15:12]][data_i[11:8]] ^ MULT_3[data_i[23:20]][data_i[19:16]] ^ data_i[31:24];
+    d2 = data_i[7:0] ^ data_i[15:8] ^ MULT_2[data_i[23:20]][data_i[19:16]] ^ MULT_3[data_i[31:28]][data_i[27:24]];
+    d3 = MULT_3[data_i[7:4]][data_i[3:0]] ^ data_i[15:8] ^ data_i[23:16] ^ MULT_2[data_i[31:28]][data_i[27:24]];
+    $display("%x %x %x %x", d0, d1, d2, d3);
+    return {d3, d2, d1, d0};
+endfunction

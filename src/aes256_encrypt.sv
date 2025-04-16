@@ -24,7 +24,7 @@ logic [127:0] data_state;
 logic [127:0] next_data_state;
 
 typedef enum {
-    GENERATE_ROUND, WAIT_FOR_VALID_DATA, ADD_ROUNDKEY, SUB_BYTES, SHIFT_ROWS, DONE
+    GENERATE_ROUND, WAIT_FOR_VALID_DATA, ADD_ROUNDKEY, SUB_BYTES, SHIFT_ROWS, MIX_COLUMNS, DONE
 } state_t;
 state_t state, next_state;
 
@@ -90,9 +90,13 @@ always_comb begin
         end
 
         SHIFT_ROWS : begin
-            next_state = DONE;
+            next_state = MIX_COLUMNS;
             next_data_state = shift_rows_128(data_state);
-            
+        end
+
+        MIX_COLUMNS : begin
+            next_state = DONE;
+            next_data_state = {multiply_helper(data_state[127:96]), multiply_helper(data_state[95:64]), multiply_helper(data_state[63:32]), multiply_helper(data_state[31:0])};
         end
 
         DONE : begin
