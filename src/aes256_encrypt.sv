@@ -100,7 +100,12 @@ always_comb begin
         end
 
         ADD_ROUNDKEY : begin
-            next_state = SUB_BYTES;
+            if (operation_counter == NUM_ROUND_KEYS_NEEDED-1) begin
+                next_state = DONE;
+                next_operation_counter = 0;
+            end else begin
+                next_state = SUB_BYTES;
+            end
             
             next_round_keys_counter = round_keys_counter + 4;
             if (operation_counter == 0) begin
@@ -116,19 +121,20 @@ always_comb begin
         end
 
         SHIFT_ROWS : begin
-            next_state = MIX_COLUMNS;
             next_data_state = shift_rows_128(data_state);
-        end
-
-        MIX_COLUMNS : begin            
+            
             if (operation_counter < NUM_ROUND_KEYS_NEEDED-2) begin
-                next_state = ADD_ROUNDKEY;
-                next_data_state = {multiply_helper(data_state[127:96]), multiply_helper(data_state[95:64]), multiply_helper(data_state[63:32]), multiply_helper(data_state[31:0])};
+                next_state = MIX_COLUMNS;
                 next_operation_counter = operation_counter + 1;
             end else begin
-                next_state = DONE;
-                next_operation_counter = 0;
+                next_state = ADD_ROUNDKEY;
+                next_operation_counter = operation_counter + 1;
             end
+        end
+
+        MIX_COLUMNS : begin
+            next_state = ADD_ROUNDKEY;
+            next_data_state = {multiply_helper(data_state[127:96]), multiply_helper(data_state[95:64]), multiply_helper(data_state[63:32]), multiply_helper(data_state[31:0])};
         end
 
         DONE : begin
