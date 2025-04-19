@@ -5,7 +5,9 @@ module aes256_encrypt (
     input  logic [127:0] axis_tdata_i,
     input  logic         axis_tvalid_i,
     input  logic         axis_tlast_i,
-    output logic [127:0] axis_tdata_o
+    
+    output logic [127:0] axis_tdata_o,
+    output logic         axis_tvalid_o
 );
 
 `include "utils"
@@ -20,6 +22,9 @@ logic [31:0] next_round_keys[0:NUM_ROUND_KEYS_NEEDED*4-1];
 int round_keys_counter;
 int next_round_keys_counter;
 
+int operation_counter;
+int next_operation_counter;
+
 logic [127:0] data_state;
 logic [127:0] next_data_state;
 
@@ -30,28 +35,42 @@ state_t state, next_state;
 
 always_ff @( posedge clk_i, posedge rst_i ) begin
     if (rst_i == 1'b1) begin
-        axis_tdata_o <= 128'h00;
         state <= GENERATE_ROUND;
         round_keys_counter <= 0;
         data_state <= 128'h0;
         // round_keys <= {NUM_ROUND_KEYS_NEEDED*4-1{32'h00}};
+        operation_counter <= 0;
+        // axis_tdata_o <= 128'h0;
+        // axis_tvalid_o <= 1'b0;
     end else begin
         state <= next_state;
         round_keys <= next_round_keys;
         round_keys_counter <= next_round_keys_counter;
         data_state <= next_data_state;
+        operation_counter <= next_operation_counter;
+
+        // axis_tdata_o <= data_state;
+        // axis_tvalid_o <= 1'b1;
+        // if (state == DONE) begin
+        //     axis_tvalid_o <= 1'b0;
+        // end
     end
 end
 
+assign axis_tdata_o = next_data_state;
 
 always_comb begin
     next_state = state;
     next_round_keys = round_keys;
     next_round_keys_counter = round_keys_counter;
     next_data_state = data_state;
+    next_operation_counter = operation_counter;
+    axis_tvalid_o = 1'b1;
 
     unique case (state)
         GENERATE_ROUND : begin
+            axis_tvalid_o = 1'b0;
+
             if (round_keys_counter == NUM_ROUND_KEYS_NEEDED*4-1) begin
                 next_state = WAIT_FOR_VALID_DATA;
                 next_round_keys_counter = 0;
@@ -72,6 +91,8 @@ always_comb begin
         end
 
         WAIT_FOR_VALID_DATA : begin
+            axis_tvalid_o = 1'b0;
+            
             if (axis_tvalid_i == 1'b1) begin
                 next_data_state = axis_tdata_i;
                 next_state = ADD_ROUNDKEY;
@@ -80,8 +101,13 @@ always_comb begin
 
         ADD_ROUNDKEY : begin
             next_state = SUB_BYTES;
-            next_data_state = axis_tdata_i ^ get_round_key_group(round_keys, round_keys_counter);
+            
             next_round_keys_counter = round_keys_counter + 4;
+            if (operation_counter == 0) begin
+                next_data_state = axis_tdata_i ^ get_round_key_group(round_keys, round_keys_counter);
+            end else begin
+                next_data_state = data_state ^ get_round_key_group(round_keys, round_keys_counter);
+            end
         end
 
         SUB_BYTES : begin
@@ -94,13 +120,19 @@ always_comb begin
             next_data_state = shift_rows_128(data_state);
         end
 
-        MIX_COLUMNS : begin
-            next_state = DONE;
-            next_data_state = {multiply_helper(data_state[127:96]), multiply_helper(data_state[95:64]), multiply_helper(data_state[63:32]), multiply_helper(data_state[31:0])};
+        MIX_COLUMNS : begin            
+            if (operation_counter < NUM_ROUND_KEYS_NEEDED-2) begin
+                next_state = ADD_ROUNDKEY;
+                next_data_state = {multiply_helper(data_state[127:96]), multiply_helper(data_state[95:64]), multiply_helper(data_state[63:32]), multiply_helper(data_state[31:0])};
+                next_operation_counter = operation_counter + 1;
+            end else begin
+                next_state = DONE;
+                next_operation_counter = 0;
+            end
         end
 
         DONE : begin
-            
+            axis_tvalid_o = 1'b0;
         end
     endcase
 end
